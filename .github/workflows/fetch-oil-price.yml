@@ -1,1 +1,38 @@
-cv
+name: Fetch oil price (FRED)
+
+on:
+  schedule:
+    # 20:30 UTC daily -- ahead of the Android app's own 21:00 UTC refresh, so a
+    # fresh window is already committed by the time the app goes looking for it.
+    # Not critical to get exactly right: FRED's own publish lag means some days
+    # this run won't have a brand new observation yet regardless, and a missed day
+    # here just self-heals on the next run since the whole window is re-fetched
+    # fresh every time (see fetch_oil_price_fred.py's own docstring).
+    - cron: '30 20 * * *'
+  workflow_dispatch: {}  # adds a manual "Run workflow" button in the Actions tab, for testing
+
+permissions:
+  contents: write  # needed to commit the updated data/oil-price.json back to the repo
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch oil price from FRED
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python scripts/fetch_oil_price_fred.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/oil-price.json
+          git diff --cached --quiet || git commit -m "Update oil price (FRED) $(date -u +%Y-%m-%d)"
+          git push
