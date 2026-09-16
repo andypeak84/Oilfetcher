@@ -2,13 +2,17 @@ name: Fetch oil price (FRED)
 
 on:
   schedule:
-    # 20:30 UTC daily -- ahead of the Android app's own 21:00 UTC refresh, so a
-    # fresh window is already committed by the time the app goes looking for it.
-    # Not critical to get exactly right: FRED's own publish lag means some days
-    # this run won't have a brand new observation yet regardless, and a missed day
-    # here just self-heals on the next run since the whole window is re-fetched
-    # fresh every time (see fetch_oil_price_fred.py's own docstring).
-    - cron: '30 20 * * *'
+    # 18:00 UTC daily -- was 20:30 UTC (30 min ahead of the Android app's 21:00 UTC
+    # refresh), but GitHub's own `schedule` trigger is documented as best-effort,
+    # not exact -- this workflow's real run-time history showed it consistently
+    # firing 1.5-3 hours late (22:13-23:19 UTC), i.e. AFTER the app's refresh on
+    # many days, defeating the "30 min ahead" margin entirely. Moved 3 hours
+    # earlier for a much bigger buffer against that jitter. Not critical to get
+    # exactly right either way: FRED's own publish lag means some days this run
+    # won't have a brand new observation yet regardless, and a missed day here
+    # just self-heals on the next run since the whole window is re-fetched fresh
+    # every time (see fetch_oil_price_fred.py's own docstring).
+    - cron: '0 18 * * *'
   workflow_dispatch: {}  # adds a manual "Run workflow" button in the Actions tab, for testing
 
 permissions:
