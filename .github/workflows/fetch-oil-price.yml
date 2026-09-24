@@ -28,9 +28,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Fetch oil price from FRED
+      - name: Fetch oil price from FRED (with an EIA fallback if FRED is stale)
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
         run: python scripts/fetch_oil_price_fred.py
 
       - name: Commit if changed
