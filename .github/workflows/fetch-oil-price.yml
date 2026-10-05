@@ -38,6 +38,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/oil-price.json
-          git diff --cached --quiet || git commit -m "Update oil price (FRED) $(date -u +%Y-%m-%d)"
+          git add data/oil-price.json data/brent-price.json
+          git diff --cached --quiet || git commit -m "Update oil + Brent price (FRED) $(date -u +%Y-%m-%d)"
           git push
