@@ -49,7 +49,7 @@ import sys
 import urllib.parse
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -135,6 +135,16 @@ def fetch_eia_series(series_id: str, api_key: str, start: date, end: date) -> li
         print(f"WARNING: HTTP {e.code} from EIA ({series_id}, non-fatal, FRED data is still used): {body}",
               file=sys.stderr)
         return []
+    except (URLError, TimeoutError, OSError) as e:
+        # Confirmed the hard way (2026-10-16, 2026-10-18): a plain network timeout here
+        # isn't an HTTPError, so it was falling through uncaught and crashing the WHOLE
+        # script -- losing even FRED's already-fetched data for BOTH benchmarks, not
+        # just skipping this optional fallback like the HTTPError branch above already
+        # does. EIA is explicitly a secondary cross-check (see this module's own
+        # docstring) and must never be able to take down the primary FRED fetch.
+        print(f"WARNING: EIA request failed ({series_id}, non-fatal, FRED data is still used): {e}",
+              file=sys.stderr)
+        return []
 
     entries = []
     for row in data.get("response", {}).get("data", []):
@@ -194,8 +204,23 @@ def main() -> None:
     today = date.today()
     start = today - timedelta(days=LOOKBACK_DAYS)
 
+    # Each benchmark isolated -- WTI and Brent are independent, same-run cross-
+    # contamination (e.g. a genuine FRED outage mid-way through WTI) shouldn't also
+    # cost Brent's otherwise-successful fetch in the same run. sys.exit(1) at the end
+    # still fails the Action (so it shows up in run history / this kind of
+    # investigation) if ANY benchmark failed, just without losing the other one's data.
+    failures = []
     for benchmark in BENCHMARKS:
-        fetch_benchmark(benchmark, fred_key, eia_key, start, today)
+        try:
+            fetch_benchmark(benchmark, fred_key, eia_key, start, today)
+        except Exception as e:
+            print(f"ERROR: {benchmark['label']} fetch failed entirely: {e}", file=sys.stderr)
+            failures.append(benchmark["label"])
+
+    if failures:
+        print(f"ERROR: {', '.join(failures)} failed this run (see above) -- other benchmark(s) still wrote normally.",
+              file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
