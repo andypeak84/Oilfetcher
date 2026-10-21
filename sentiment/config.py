@@ -40,6 +40,13 @@ RELEVANCE_KEYWORDS = [
     "ukraine", "russia", "u-turn",
     # Investment (owner's rule: loss of investment is negative for the currency).
     "pulls out", "pull out", "investment", "invests", "data centre", "data center", "job cuts",
+    # Added 2026-10-21 so the owner's newer rules (ratings.csv) can fire at all: 5 of the 14
+    # rated headlines were being dropped HERE, before the scorer ever saw them. FTSE (falls ->
+    # pound up), UK's own gas / North Sea (bullish), job cuts blamed on tax rises (bearish), and
+    # Trump / Zelensky / midterms (US weakness and the US-Ukraine rift).
+    "ftse", "north sea", "jackdaw", "gasfield", "gas field", "drilling",
+    "tax rise", "tax rises", "tax hike", "tax hikes", "tax increase", "tax increases",
+    "trump", "zelensky", "midterm", "midterms",
 ]
 
 # LLM scorer (optional). Needs ANTHROPIC_API_KEY in the environment.

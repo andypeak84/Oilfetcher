@@ -96,6 +96,12 @@ SUPPLY_RISE = (r"\b" + _VOL + r"\s+(\w+\s+)?(rise|rises|rose|jump|jumps|jumped|s
                r"increase|increases|increased|recover|recovers|recovered)\b")
 ENERGY_UP_EXTRA = (r"\b(tighter|tightening|touch(es|ed)? \$?\d|(security|shipping) (threats?|concerns?|risks?)|"
                    r"safety of shipping)\b")
+# Owner's $100 rule (ratings.csv, 2026-10-20): "100$ or over per barrel is bad for gbp". Wording that
+# says a price topped / reached a level or hit a multi-month high, and a stated oil price of $100+,
+# all count as a rise. Missed before: "U.S. crude oil tops $105, Brent at five-month highs" scored 0.
+ENERGY_UP_OWNER = (r"\b(tops?|topped|exceeds?|exceeded|surpass\w*|reach(es|ed)?)\b"
+                   r"|\bhighs?\b"
+                   r"|\b(oil|crude|brent|wti)\b[^.;:]{0,40}\$\s?(1\d\d|[2-9]\d\d)\b")
 
 
 def _energy(text):
@@ -104,7 +110,8 @@ def _energy(text):
     sf = len(re.findall(SUPPLY_FALL, text))
     sr = len(re.findall(SUPPLY_RISE, text))
     stripped = re.sub(SUPPLY_FALL + "|" + SUPPLY_RISE, " ", text)
-    up = len(re.findall(ENERGY_UP, stripped)) + len(re.findall(ENERGY_UP_EXTRA, stripped)) + sf
+    up = (len(re.findall(ENERGY_UP, stripped)) + len(re.findall(ENERGY_UP_EXTRA, stripped))
+          + len(re.findall(ENERGY_UP_OWNER, stripped)) + sf)
     down = len(re.findall(ENERGY_DOWN, stripped)) + sr
     if up == down:
         return None
@@ -112,7 +119,7 @@ def _energy(text):
         conf, why = 0.5, "Energy prices rising or supply tightening"
         if re.search(r"\b(iran|iranian|tehran|hormuz)\b", text):
             conf, why = 0.7, "Iran-linked oil disruption (owner: especially negative for the pound)"
-        elif re.search(r"\b(middle east|gulf|red sea|saudi|iraq|yemen|houthis?|israel)\b", text):
+        elif re.search(r"\b(middle east|mideast|gulf|red sea|saudi|iraq|yemen|houthis?|israel)\b", text):
             conf, why = 0.6, "Middle East oil disruption (owner: generally negative for the pound)"
         return dict(direction=-1, confidence=conf, driver="energy",
                     reason=why + ": negative for the pound, bearish for GBP/USD.")
@@ -218,6 +225,110 @@ def _investment(text):
                        f"{'negative' if sign < 0 else 'positive'} for that currency.")
 
 
+# ---- Channels added 2026-10-21 from the owner's ratings.csv (each cites the rated headline) ----
+
+# UK's own gas/oil (owner: "UK are mining their own gas"; "Green energy ... makes fuel more
+# expensive"). New UK domestic supply being approved / announced eases energy supply, which the
+# energy rule already treats as positive for the pound. Five rated headlines: Jackdaw gas field
+# announcement, North Sea drilling approval (x3 wordings), Jackdaw "undermines green credentials".
+UK_SUPPLY_OBJ = (r"\b(north sea|jackdaw|rosebank|cambo|gas ?fields?|oil ?fields?|offshore (gas|oil)|"
+                 r"drilling|licen[cs]es?)\b")
+UK_SUPPLY_GO = (r"\b(approv\w+|go-ahead|green[- ]?light\w*|backs?|clears?|cleared|announce\w*|"
+                r"announcement|develop\w*|expan\w+|new (drilling|licen[cs]es?|gas|oil))\b")
+UK_SUPPLY_BLOCK = r"\b(bans?|banned|scrap\w*|blocks?|blocked|halts?|halted|freezes?|ends?|stops?|rejects?|refuses?)\b"
+
+
+def _uk_energy_supply(text):
+    if not (re.search(UK_SUPPLY_OBJ, text) and re.search(UK_SUPPLY_GO, text)):
+        return None
+    if re.search(UK_SUPPLY_BLOCK, text) or re.search(US_MARKERS, text):
+        return None
+    return dict(direction=1, confidence=0.5, driver="energy",
+                reason="UK developing its own gas/oil (owner ruling): easing energy supply, positive "
+                       "for the pound, bullish for GBP/USD.")
+
+
+# Job cuts blamed on tax rises in one headline (owner, Paddy Power: "Jobs cuts and tax rises in
+# the same headline" -> -1). A UK-news default: with no region named it is assumed UK, since the
+# feeds are UK-centric; a US marker flips it (that mirror is an assumption, not rated).
+JOB_CUTS = (r"\b(cuts?|axes?|axed|slash(es|ed)?|losing|loses?|lost) ([\d,]+ |\w+ ){0,2}jobs\b"
+            r"|\bjob (cuts|losses)\b")
+TAX_RISES = (r"\btax(es)? (rises?|hikes?|increases?|rose|raised)\b"
+             r"|\b(rise|rises|hike|hikes|increase|increases) in (\w+ )?tax(es)?\b")
+
+
+def _jobs_and_tax(text):
+    if not (re.search(JOB_CUTS, text) and re.search(TAX_RISES, text)):
+        return None
+    us = bool(re.search(US_MARKERS, text)) and not re.search(UK_MARKERS, text)
+    return dict(direction=1 if us else -1, confidence=0.45, driver="jobs",
+                reason=f"Job cuts blamed on tax rises (owner ruling): negative for the "
+                       f"{'dollar' if us else 'pound'}, {'bullish' if us else 'bearish'} for GBP/USD.")
+
+
+# UK inflation (owner, "Will UK Inflation Rise to 3.5% This Week?" -> -1): "This is very bad
+# inflation data for the UK ... far above our target. If this type of article appears often gbp
+# will surely fall ... It should be weighted on the most." This REVERSES the textbook reading
+# (hotter inflation -> hawkish BoE -> stronger pound) that this scorer used before for UK
+# inflation, so it takes priority over the generic strong/weak words. "Weighted the most" =
+# confidence 0.9, so these items dominate the time-decayed average. The mirror (UK inflation
+# FALLING = bullish) is an assumption, not rated -- kept at low confidence. US inflation is
+# untouched. NOTE: surprise.py (manual data releases) still uses the textbook reading.
+INFLATION = r"\b(inflation|cpi)\b"
+INFL_UP = (r"\b(rise|rises|rising|rose|jump\w*|accelerat\w+|surg\w+|climb\w*|hotter|higher|soar\w*|"
+           r"spike\w*|exceeds?|above (forecasts?|expectations?|target))\b")
+INFL_DOWN = (r"\b(fall|falls|falling|fell|drop\w*|slow\w*|cool\w*|eas(e|es|ed|ing)|slid\w*|declin\w+|"
+             r"lowest|below (forecasts?|expectations?|target))\b")
+
+
+def _uk_inflation(text):
+    if not re.search(INFLATION, text):
+        return None
+    if not re.search(UK_MARKERS, text) or re.search(US_MARKERS, text):
+        return None
+    up, down = len(re.findall(INFL_UP, text)), len(re.findall(INFL_DOWN, text))
+    if up == down:
+        return None
+    if up > down:
+        return dict(direction=-1, confidence=0.9, driver="inflation",
+                    reason="UK inflation rising (owner ruling: very bad for the UK, weighted most): "
+                           "negative for the pound, bearish for GBP/USD.")
+    return dict(direction=1, confidence=0.45, driver="inflation",
+                reason="UK inflation falling (mirror of the owner's rule, unconfirmed): positive for "
+                       "the pound, bullish for GBP/USD.")
+
+
+# FTSE 100 falling (owner: "FTSE 100 Falls. The pound is likely to increase") -> +1. A stronger
+# pound cuts the sterling value of the FTSE's overseas earnings, so the index and the pound tend
+# to move opposite ways. Only the FALL side was rated; a rising FTSE is NOT scored.
+FTSE_FALL = (r"\bftse( ?100| ?250)?\b.{0,25}\b(fall|falls|fell|drop|drops|dropped|slip|slips|slipped|"
+             r"slide|slides|slid|sink|sinks|sank|lose|loses|lost|tumble\w*|slump\w*|retreat\w*|dip\w*)\b")
+
+
+def _ftse(text):
+    if not re.search(FTSE_FALL, text):
+        return None
+    return dict(direction=1, confidence=0.4, driver="risk",
+                reason="FTSE 100 falling (owner ruling): pound likely to rise, bullish for GBP/USD.")
+
+
+# US-Ukraine relationship worsening (owner: "US backed war failing over oil due to mid-term
+# elections") -> +1, a US foreign-policy setback / disunity that is negative for the dollar.
+# One rated example, so deliberately narrow and low confidence.
+US_UA_PAIR = (r"\b(trump|white house|washington|us|u\.s\.)\b.{0,80}\b(zelensky\w*|ukrain\w*|kyiv)\b"
+              r"|\b(zelensky\w*|ukrain\w*|kyiv)\b.{0,80}\b(trump|white house|washington)\b")
+RIFT_WORDS = (r"\b(worsens?|worsened|distrust|rift|row|clash\w*|spat|falls? out|breakdown|strain\w*|"
+              r"deteriorat\w+|sours?|soured|loggerheads|at odds|feud|bust-?up|disagree\w*|tensions?)\b")
+
+
+def _us_ukraine_rift(text):
+    if re.search(US_UA_PAIR, text) and re.search(RIFT_WORDS, text):
+        return dict(direction=1, confidence=0.4, driver="politics",
+                    reason="US-Ukraine relationship worsening (owner ruling): US setback, negative for "
+                           "the dollar, bullish for GBP/USD.")
+    return None
+
+
 def _special(text):
     """Owner's channels (energy, war, policy). Agreeing channels add confidence; conflicting
     channels leave the headline neutral with low confidence."""
@@ -232,13 +343,18 @@ def _special(text):
     weak = _us_weakness(text)
     if weak:
         return weak
-    results = [r for r in (_energy(text), _policy(text), _uncertainty(text), _investment(text)) if r]
+    results = [r for r in (_energy(text), _policy(text), _uncertainty(text), _investment(text),
+                           _uk_energy_supply(text), _jobs_and_tax(text), _uk_inflation(text),
+                           _ftse(text), _us_ukraine_rift(text)) if r]
     if not results:
         return None
     if len({r["direction"] for r in results}) > 1:
         return dict(direction=0, confidence=0.2, driver=results[0]["driver"],
                     reason="Conflicting rules (" + ", ".join(r["driver"] for r in results) + "): left neutral.")
-    conf = min(0.7, max(r["confidence"] for r in results) + 0.1 * (len(results) - 1))
+    # Agreeing channels add 0.1 each, capped at 0.7 -- except a single rule that is already
+    # higher than the cap (the owner's "weighted most" UK-inflation rule, 0.9) keeps its own.
+    top = max(r["confidence"] for r in results)
+    conf = min(max(0.7, top), top + 0.1 * (len(results) - 1))
     return dict(direction=results[0]["direction"], confidence=round(conf, 2),
                 driver=results[0]["driver"], reason=" ".join(r["reason"] for r in results))
 
