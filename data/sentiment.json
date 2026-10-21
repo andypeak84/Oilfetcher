@@ -1,6 +1,6 @@
 {
   "pair": "GBP/USD",
-  "generated_ts": 1792549637,
+  "generated_ts": 1792551036,
   "scale": "-1 = strongly bearish for GBP/USD, +1 = strongly bullish",
   "windows": {
     "1h": {
@@ -14,13 +14,13 @@
       "articles": 0
     },
     "24h": {
-      "score": 0.0,
-      "label": "neutral",
-      "articles": 1
+      "score": 0.539,
+      "label": "strongly bullish",
+      "articles": 4
     }
   },
   "scorers_24h": {
-    "rules": 8
+    "rules": 9
   },
   "headlines": [],
   "headlines_note": "BBC items are scored and counted but their headlines are not republished.",
