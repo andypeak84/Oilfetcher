@@ -1,0 +1,42 @@
+name: Fetch US 2yr yield and VIX
+
+on:
+  schedule:
+    # 07:15 UTC daily: the previous US trading day is final by then, and the Android app's own refresh
+    # (21:00 UTC) targets the previous business day, so this is many hours ahead of when it is read.
+    # GitHub's schedule is best-effort and can fire hours late (see the oil workflow's note); that is
+    # fine at this margin.
+    - cron: '15 7 * * *'
+  workflow_dispatch: {}  # manual "Run workflow" button, for testing
+
+permissions:
+  contents: write  # commits data/us2y.json and data/vix.json back to the repo
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch US 2yr yield (Treasury, FRED fallback) and VIX (FRED)
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python scripts/fetch_macro.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/us2y.json data/vix.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update US 2yr yield + VIX $(date -u +%Y-%m-%d)"
+          # Other workflows push to this branch too: rebase and retry rather than fail on a race.
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep 5
+          done
+          exit 1
