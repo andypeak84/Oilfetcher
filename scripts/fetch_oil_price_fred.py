@@ -157,13 +157,23 @@ def fetch_eia_series(series_id: str, api_key: str, start: date, end: date) -> li
 
 def fetch_benchmark(benchmark: dict, fred_key: str, eia_key: str | None, start: date, today: date) -> None:
     label = benchmark["label"]
-    fred_entries = fetch_fred_series(benchmark["fred_series"], fred_key, start, today)
+    # A FRED OUTAGE (not just stale data) must not kill the run: on 2026-10-21 FRED was in site
+    # maintenance and returned an HTML "We'll be back soon" page instead of JSON. That raised here,
+    # the Action failed, and the oil/Brent files froze at 10-14 while EIA (the primary source FRED
+    # mirrors) was current to 10-20 -- so the app's oil features went blank for days. Treat any FRED
+    # failure as "FRED has nothing" and let the EIA fallback below fill the whole window.
+    try:
+        fred_entries = fetch_fred_series(benchmark["fred_series"], fred_key, start, today)
+    except Exception as e:
+        print(f"[{label}] WARNING: FRED unavailable ({type(e).__name__}: {str(e)[:120]}) -- "
+              f"falling back to EIA for everything.", file=sys.stderr)
+        fred_entries = []
     by_date = {e["date"]: e["price"] for e in fred_entries}
 
     fred_newest = max((datetime.fromisoformat(d).date() for d in by_date), default=None)
     staleness = business_days_between(fred_newest, today) if fred_newest else None
 
-    if staleness is not None and staleness > ANCHOR_TOLERANCE_BUSINESS_DAYS:
+    if staleness is None or staleness > ANCHOR_TOLERANCE_BUSINESS_DAYS:
         print(f"[{label}] FRED's newest observation ({fred_newest}) is {staleness} business day(s) "
               f"stale -- trying EIA's {benchmark['eia_series']} as a fallback for the gap.")
         if not eia_key:
@@ -177,9 +187,11 @@ def fetch_benchmark(benchmark: dict, fred_key: str, eia_key: str | None, start: 
                     added += 1
             eia_newest = max((datetime.fromisoformat(e["date"]).date() for e in eia_entries), default=None)
             print(f"[{label}] EIA's newest observation: {eia_newest}. Added {added} date(s) FRED didn't have.")
-    elif staleness is None:
-        print(f"[{label}] WARNING: FRED returned zero real observations for this window -- "
-              f"check the key/series ID.", file=sys.stderr)
+
+    if not by_date:
+        # Neither source gave anything. Do NOT overwrite the existing file with an empty list --
+        # that would erase the last good data. Fail the run so it shows in the Actions history.
+        raise RuntimeError(f"[{label}] no observations from FRED or EIA; leaving {benchmark['file']} unchanged")
 
     entries = [{"date": d, "price": p} for d, p in sorted(by_date.items())]
 
