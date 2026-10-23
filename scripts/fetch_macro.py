@@ -22,6 +22,7 @@ the other, but the run still exits non-zero so the failure shows in the Actions 
 import json
 import os
 import sys
+import time
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
@@ -80,7 +81,17 @@ def get_vix(start: date, end: date, fred_key: str | None) -> list[dict]:
     if not fred_key:
         print("[vix] No FRED_API_KEY set.", file=sys.stderr)
         return []
-    return fetch_fred_series("VIXCLS", fred_key, start, end)
+    # FRED's API times out now and then (seen from GitHub's runners); a few quick retries beat waiting
+    # for the next scheduled run, and the app reads this file once a day, so every miss costs a day.
+    last_error = None
+    for attempt in range(1, 5):
+        try:
+            return fetch_fred_series("VIXCLS", fred_key, start, end)
+        except Exception as e:  # noqa: BLE001
+            last_error = e
+            print(f"[vix] FRED attempt {attempt}/4 failed ({type(e).__name__}: {str(e)[:100]})", file=sys.stderr)
+            time.sleep(5 * attempt)
+    raise last_error
 
 
 def publish(name: str, label: str, getter, start: date, end: date, fred_key: str | None) -> bool:

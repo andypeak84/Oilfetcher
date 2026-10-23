@@ -2,11 +2,12 @@ name: Fetch US 2yr yield and VIX
 
 on:
   schedule:
-    # 07:15 UTC daily: the previous US trading day is final by then, and the Android app's own refresh
-    # (21:00 UTC) targets the previous business day, so this is many hours ahead of when it is read.
-    # GitHub's schedule is best-effort and can fire hours late (see the oil workflow's note); that is
-    # fine at this margin.
-    - cron: '15 7 * * *'
+    # FRED posts each VIX close at an unpredictable time the next day, and a single early run (it used
+    # to be 07:15 only) kept missing it, leaving vix.json a day or two stale. Four runs a day, Monday to
+    # Saturday (Saturday catches Friday's close), the last at 20:15 UTC just before the Android app's own
+    # 21:00 UTC refresh. A run with nothing new changes no file and commits nothing, so this is free.
+    # GitHub's schedule is best-effort and can fire late.
+    - cron: '15 7,12,17,20 * * 1-6'
   workflow_dispatch: {}  # manual "Run workflow" button, for testing
 
 permissions:
