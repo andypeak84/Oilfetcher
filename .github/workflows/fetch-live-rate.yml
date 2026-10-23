@@ -1,0 +1,40 @@
+name: Publish live GBP/USD rate
+
+on:
+  schedule:
+    # Hourly on weekdays (forex is closed at weekends): 5 days x 24 = 120 calls a week, under Alpha
+    # Vantage's 25-a-day free limit. GitHub's schedule is best-effort and can fire late or skip a run.
+    - cron: '7 * * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch live rate
+        env:
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+        run: python scripts/fetch_live_rate.py
+
+      # Published to a throwaway single-commit branch (force-pushed) so hourly updates don't add
+      # 24 commits a day to main's history. The app reads it from the live-data branch.
+      - name: Publish to live-data branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp data/live-rate.json "$RUNNER_TEMP/live-rate.json"
+          git switch --orphan live-data
+          git rm -rf -q . || true
+          mkdir -p data && cp "$RUNNER_TEMP/live-rate.json" data/live-rate.json
+          git add data/live-rate.json
+          git commit -q -m "Live GBP/USD rate $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -f origin live-data
