@@ -2,8 +2,8 @@ name: Record latest Brent (OilPriceAPI)
 
 on:
   schedule:
-    # 06:15 UTC every weekday: one call a day (free plan). GitHub's schedule is best-effort and may run late.
-    - cron: '15 6 * * 1-5'
+    # 19:45 UTC every weekday: after Brent's settlement and before the app's 21:00 UTC refresh, so the reading is that day's close and dates line up with the app's target day. One call a day (free plan). GitHub's schedule is best-effort and may run late.
+    - cron: '45 19 * * 1-5'
   workflow_dispatch: {}
 
 permissions:
