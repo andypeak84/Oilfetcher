@@ -1,5 +1,210 @@
 [
  {
+  "date": "2026-08-24",
+  "price": 92.71,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-08-25",
+  "price": 88.24,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-08-26",
+  "price": 87.77,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-08-27",
+  "price": 90.18,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-08-28",
+  "price": 89.75,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-01",
+  "price": 96.02,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-02",
+  "price": 97.59,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-03",
+  "price": 100.52,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-04",
+  "price": 102.24,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-07",
+  "price": 104.47,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-08",
+  "price": 106.12,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-09",
+  "price": 109.51,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-10",
+  "price": 120.98,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-11",
+  "price": 118.06,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-14",
+  "price": 121.25,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-15",
+  "price": 130.8,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-16",
+  "price": 127.84,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-17",
+  "price": 121.18,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-18",
+  "price": 119.66,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-21",
+  "price": 116.15,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-22",
+  "price": 114.89,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-23",
+  "price": 117.45,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-24",
+  "price": 120.92,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-25",
+  "price": 116.01,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-28",
+  "price": 119.97,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-29",
+  "price": 113.96,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-09-30",
+  "price": 115.91,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-01",
+  "price": 114.82,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-02",
+  "price": 135.51,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-05",
+  "price": 125.51,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-06",
+  "price": 125.44,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-07",
+  "price": 126.0,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-08",
+  "price": 130.18,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-09",
+  "price": 130.03,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-12",
+  "price": 129.95,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-13",
+  "price": 125.78,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-14",
+  "price": 126.55,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-15",
+  "price": 126.35,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-16",
+  "price": 119.33,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-19",
+  "price": 118.82,
+  "source": "eia-seed"
+ },
+ {
+  "date": "2026-10-20",
+  "price": 115.22,
+  "source": "eia-seed"
+ },
+ {
   "date": "2026-10-23",
   "price": 113.89,
   "readAtUtc": "2026-10-23T05:06:35.188Z"
